@@ -1,0 +1,53 @@
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository:
+  pullPolicy: Always
+  pullSecrets: dcb-registry-key
+
+# Values: ClusterIP, NodePort, LoadBalancer
+serviceType: ClusterIP
+
+## Ports published to Service and redirected to Pods
+servicePorts:
+  - servicePort: 80
+    containerPort: 5001
+    protocol: TCP
+    name: http
+
+env:
+  ENV: "production"
+  HOST: "https://360.dcb.kg"
+  HTTP_PORT: 5001
+  DATABASE: "production_database"
+  DATABASE_HOST: "prod360-pgsql1.linux.doscredobank.kg"
+  DATABASE_PORT: "5432"
+  BUILD_ENV: prod
+  THROTTLER_TTL_SECONDS: 10
+  THROTTLER_LIMIT: 2
+secret:
+  enabled: true
+  envValues:
+    DATABASE_USER: "prod_user"
+    DATABASE_PASSWORD: "${vault:secret/prod-dcb/example-service-config#postgres.password}"
+
+ingress:
+  enabled: true
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/proxy-body-size: "15m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+  rules:
+  - host: 360.dcb.kg
+    http:
+      paths:
+      - backend:
+          service:
+            name: REPLACE_WITH_APP_NAME_FROM_GITLAB_CI
+            port:
+              number: 80
+        path: /api/example(/|$)(.*)
+        pathType: Prefix
